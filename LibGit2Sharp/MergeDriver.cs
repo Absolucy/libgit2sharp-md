@@ -172,49 +172,53 @@ namespace LibGit2Sharp
 
         unsafe int ApplyMergeCallback(IntPtr merge_driver, IntPtr path_out, UIntPtr mode_out, IntPtr merged_out, IntPtr driver_name, IntPtr merge_driver_source)
         {
-            MergeDriverSource mergeDriverSource;
             try
             {
-                mergeDriverSource = MergeDriverSource.FromNativePtr(merge_driver_source);
-                var result = Apply(mergeDriverSource);
-
-                if (result.Status == MergeStatus.Conflicts)
+                using (var mergeDriverSource = MergeDriverSource.FromNativePtr(merge_driver_source))
                 {
-                    merged_out = IntPtr.Zero;
-                    return (int)GitErrorCode.MergeConflict;
+                    var result = Apply(mergeDriverSource);
+
+                    if (result.Status == MergeStatus.Conflicts)
+                    {
+                        merged_out = IntPtr.Zero;
+                        return (int)GitErrorCode.MergeConflict;
+                    }
+
+                    var len = result.Content.Length;
+                    Proxy.git_buf_grow(merged_out, (uint)len);
+                    var buffer = (git_buf*)merged_out.ToPointer();
+                    using (result.Content)
+                    {
+                        using (var unsafeStream = new UnmanagedMemoryStream((byte*)buffer->ptr.ToPointer(), len, len, FileAccess.Write))
+                            result.Content.CopyTo(unsafeStream);
+                    }
+                    buffer->size = (UIntPtr)len;
+
+                    // Decide which source to use for path_out
+                    var driver_source = (git_merge_driver_source*)merge_driver_source.ToPointer();
+                    var ancestorPath = mergeDriverSource.Ancestor?.Path;
+                    var oursPath = mergeDriverSource.Ours?.Path;
+                    var theirsPath = mergeDriverSource.Theirs?.Path;
+                    var best = BestPath(ancestorPath, oursPath, theirsPath);
+                    // Since there is no memory management of the returned character array 'path_out',
+                    // we can only set it to one of the incoming argument strings
+                    if (best == null)
+                        *(char**)path_out.ToPointer() = null;
+                    if (best == ancestorPath)
+                        *(char**)path_out.ToPointer() = driver_source->ancestor->path;
+                    else if (best == oursPath)
+                        *(char**)path_out.ToPointer() = driver_source->ours->path;
+                    else if (best == theirsPath)
+                        *(char**)path_out.ToPointer() = driver_source->theirs->path;
+
+                    // Decide which source to use for mode_out
+                    var ancestorMode = mergeDriverSource.Ancestor?.Mode ?? Mode.Nonexistent;
+                    var oursMode = mergeDriverSource.Ours?.Mode ?? Mode.Nonexistent;
+                    var theirsMode = mergeDriverSource.Theirs?.Mode ?? Mode.Nonexistent;
+                    *(uint*)mode_out.ToPointer() = (uint)BestMode(ancestorMode, oursMode, theirsMode);
+
+                    return 0;
                 }
-
-                var len = result.Content.Length;
-                Proxy.git_buf_grow(merged_out, (uint)len);
-                var buffer = (git_buf*)merged_out.ToPointer();
-                using (var unsafeStream = new UnmanagedMemoryStream((byte*)buffer->ptr.ToPointer(), len, len, FileAccess.Write))
-                    result.Content.CopyTo(unsafeStream);
-                buffer->size = (UIntPtr)len;
-
-                // Decide which source to use for path_out
-                var driver_source = (git_merge_driver_source*)merge_driver_source.ToPointer();
-                var ancestorPath = mergeDriverSource.Ancestor?.Path;
-                var oursPath = mergeDriverSource.Ours?.Path;
-                var theirsPath = mergeDriverSource.Theirs?.Path;
-                var best = BestPath(ancestorPath, oursPath, theirsPath);
-                // Since there is no memory management of the returned character array 'path_out',
-                // we can only set it to one of the incoming argument strings
-                if (best == null)
-                    *(char**)path_out.ToPointer() = null;
-                if (best == ancestorPath)
-                    *(char**)path_out.ToPointer() = driver_source->ancestor->path;
-                else if (best == oursPath)
-                    *(char**)path_out.ToPointer() = driver_source->ours->path;
-                else if (best == theirsPath)
-                    *(char**)path_out.ToPointer() = driver_source->theirs->path;
-
-                // Decide which source to use for mode_out
-                var ancestorMode = mergeDriverSource.Ancestor?.Mode ?? Mode.Nonexistent;
-                var oursMode = mergeDriverSource.Ours?.Mode ?? Mode.Nonexistent;
-                var theirsMode = mergeDriverSource.Theirs?.Mode ?? Mode.Nonexistent;
-                *(uint*)mode_out.ToPointer() = (uint)BestMode(ancestorMode, oursMode, theirsMode);
-
-                return 0;
             }
             catch (Exception)
             {

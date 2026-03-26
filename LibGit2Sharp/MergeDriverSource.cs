@@ -8,7 +8,7 @@ namespace LibGit2Sharp
     /// A merge driver source - describes the repository and file being merged.
     /// The MergeDriverSource is what is sent to the Merge Driver callback.
     /// </summary>
-    public class MergeDriverSource
+    public class MergeDriverSource : IDisposable
     {
         /// <summary>
         /// The repository containing the file to be merged
@@ -65,6 +65,14 @@ namespace LibGit2Sharp
                 IndexEntry.BuildFromPtr(ptr->ancestor),
                 IndexEntry.BuildFromPtr(ptr->ours),
                 IndexEntry.BuildFromPtr(ptr->theirs));
+        }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public void Dispose()
+        {
+            Repository.Dispose();
         }
     }
 }
