@@ -74,6 +74,7 @@ namespace LibGit2Sharp
             : this(null, null, RepositoryRequiredParameter.None)
         {
             handle = repoHandle;
+            RegisterForCleanup(handle);
         }
 
         /// <summary>
