@@ -1,6 +1,10 @@
-# LibGit2Sharp
+# LibGit2Sharp-md
 
-[![CI](https://github.com/libgit2/libgit2sharp/actions/workflows/ci.yml/badge.svg)](https://github.com/libgit2/libgit2sharp/actions/workflows/ci.yml) 
+A fork of [libgit2sharp](https://github.com/libgit2/libgit2sharp), which is seemingly unmaintained, with support for merge drivers, via maskmaster's PR: https://github.com/libgit2/libgit2sharp/pull/2107
+
+---
+
+[![CI](https://github.com/libgit2/libgit2sharp/actions/workflows/ci.yml/badge.svg)](https://github.com/libgit2/libgit2sharp/actions/workflows/ci.yml)
 [![NuGet version (LibGit2Sharp)](https://img.shields.io/nuget/v/LibGit2Sharp.svg)](https://www.nuget.org/packages/LibGit2Sharp/)
 
 **LibGit2Sharp brings all the might and speed of [libgit2](https://libgit2.org/), a native Git implementation, to the managed world of .NET**
